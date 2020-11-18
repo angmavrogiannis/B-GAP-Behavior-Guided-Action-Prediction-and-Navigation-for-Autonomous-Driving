@@ -1,3 +1,0 @@
-[rl_agents.trainer.evaluation:INFO] Episode 0 score: 24.5 
-[rl_agents.trainer.evaluation:INFO] Saved DQNAgent model to /home/abhinavmodi/git_cloned/rl-agents/scripts/out/HighwayEnv/DQNAgent/dqn_20200503-223925_10485/checkpoint-0.tar 
-[rl_agents.trainer.evaluation:INFO] Saved DQNAgent model to /home/abhinavmodi/git_cloned/rl-agents/scripts/out/HighwayEnv/DQNAgent/dqn_20200503-223925_10485/checkpoint-final.tar 

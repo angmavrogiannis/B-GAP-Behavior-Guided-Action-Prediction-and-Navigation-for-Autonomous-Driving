@@ -1,3 +1,0 @@
-[rl_agents.trainer.evaluation:INFO] Episode 0 score: 13.8 
-[rl_agents.trainer.evaluation:INFO] Saved DQNAgent model to /home/angelosm/GNN-RL-planning/rl-agents/scripts/out/HighwayEnv/DQNAgent/dqn_20201019-042040_5395/checkpoint-0.tar 
-[rl_agents.trainer.evaluation:INFO] Episode 1 score: 2.0 

@@ -1,6 +1,7 @@
 import itertools
 
 import numpy as np
+from numpy.linalg import LinAlgError
 
 
 def intervals_product(a, b):
@@ -15,6 +16,20 @@ def intervals_product(a, b):
     return np.array(
         [np.dot(p(a[0]), p(b[0])) - np.dot(p(a[1]), n(b[0])) - np.dot(n(a[0]), p(b[1])) + np.dot(n(a[1]), n(b[1])),
          np.dot(p(a[1]), p(b[1])) - np.dot(p(a[0]), n(b[1])) - np.dot(n(a[1]), p(b[0])) + np.dot(n(a[0]), n(b[0]))])
+
+
+def intervals_scaling(a, b):
+    """
+        Scale an intervals
+    :param a: matrix a
+    :param b: interval [b_min, b_max]
+    :return: the interval of their product ab
+    """
+    p = lambda x: np.maximum(x, 0)
+    n = lambda x: np.maximum(-x, 0)
+    return np.array(
+        [np.dot(p(a), b[0]) - np.dot(n(a), b[1]),
+         np.dot(p(a), b[1]) - np.dot(n(a), b[0])])
 
 
 def intervals_diff(a, b):
@@ -62,6 +77,40 @@ def vector_interval_section(v_i, direction):
     return np.array([min(corners_dist), max(corners_dist)])
 
 
+def interval_absolute_to_local(position_i, lane):
+    """
+        Converts an interval in absolute x,y coordinates to an interval in local (longiturinal, lateral) coordinates
+    :param position_i: the position interval [x_min, x_max]
+    :param lane: the lane giving the local frame
+    :return: the corresponding local interval
+    """
+    position_corners = [[position_i[0, 0], position_i[0, 1]],
+                        [position_i[0, 0], position_i[1, 1]],
+                        [position_i[1, 0], position_i[0, 1]],
+                        [position_i[1, 0], position_i[1, 1]]]
+    corners_local = np.array([lane.local_coordinates(c) for c in position_corners])
+    longitudinal_i = np.array([min(corners_local[:, 0]), max(corners_local[:, 0])])
+    lateral_i = np.array([min(corners_local[:, 1]), max(corners_local[:, 1])])
+    return longitudinal_i, lateral_i
+
+
+def interval_local_to_absolute(longitudinal_i, lateral_i, lane):
+    """
+        Converts an interval in local (longiturinal, lateral) coordinates to an interval in absolute x,y coordinates
+    :param longitudinal_i: the longitudinal interval [L_min, L_max]
+    :param lateral_i: the lateral interval [l_min, l_max]
+    :param lane: the lane giving the local frame
+    :return: the corresponding absolute interval
+    """
+    corners_local = [[longitudinal_i[0], lateral_i[0]],
+                     [longitudinal_i[0], lateral_i[1]],
+                     [longitudinal_i[1], lateral_i[0]],
+                     [longitudinal_i[1], lateral_i[1]]]
+    corners_absolute = np.array([lane.position(*c) for c in corners_local])
+    position_i = np.array([np.amin(corners_absolute, axis=0), np.amax(corners_absolute, axis=0)])
+    return position_i
+
+
 def polytope(parametrized_f, params_intervals):
     """
 
@@ -80,19 +129,42 @@ def polytope(parametrized_f, params_intervals):
     return a0, d_a
 
 
-def is_metzler(matrix):
-    return (matrix - np.diagonal(matrix) >= 0).all()
+def is_metzler(matrix, eps=1e-9):
+    return (matrix - np.diag(np.diag(matrix)) >= -eps).all()
 
 
 class LPV(object):
-    def __init__(self, x0, a0, da, d=None, center=None, x_i=None):
+    def __init__(self, x0, a0, da, b=None, d=None, omega_i=None, u=None, k=None, center=None, x_i=None):
+        """
+        A Linear Parameter-Varying system:
+                    dx = (a0 + sum(da))(x - center) + bd + c
+        :param x0: initial state
+        :param a0: nominal dynamics
+        :param da: list of dynamics deviations
+        :param b: control matrix
+        :param d: perturbation matrix
+        :param omega_i: perturbation bounds
+        :param u: constant known control
+        :param k: linear feedback: a0 x + bu -> (a0+bk)x + b(u-kx), where a0+bk is stable
+        :param center: asymptotic state
+        :param x_i: initial state interval
+        """
         self.x0 = np.array(x0, dtype=float)
         self.a0 = np.array(a0, dtype=float)
         self.da = [np.array(da_i) for da_i in da]
-        self.d = np.array(d) if d is not None else np.zeros(self.x0.shape)
+        self.b = np.array(b) if b is not None else np.zeros((*self.x0.shape, 1))
+        self.d = np.array(d) if d is not None else np.zeros((*self.x0.shape, 1))
+        self.omega_i = np.array(omega_i) if omega_i is not None else np.zeros((2, 1))
+        self.u = np.array(u) if u is not None else np.zeros((1,))
+        self.k = np.array(k) if k is not None else np.zeros((self.b.shape[1], self.b.shape[0]))
         self.center = np.array(center) if center is not None else np.zeros(self.x0.shape)
+
+        # Closed-loop dynamics
+        self.a0 += self.b @ self.k
+
         self.coordinates = None
 
+        self.x_t = self.x0
         self.x_i = np.array(x_i) if x_i is not None else np.array([self.x0, self.x0])
         self.x_i_t = None
 
@@ -110,17 +182,25 @@ class LPV(object):
         if not is_metzler(a0):
             eig_v, transformation = np.linalg.eig(a0)
             if np.isreal(eig_v).all():
-                self.coordinates = (transformation, np.linalg.inv(transformation))
-            else:
-                print("Non Metzler A0 with complex eigenvalues: ", eig_v)
+                try:
+                    self.coordinates = (transformation, np.linalg.inv(transformation))
+                except LinAlgError:
+                    pass
+            if not self.coordinates:
+                print("Non Metzler A0 with eigenvalues: ", eig_v)
         else:
             self.coordinates = (np.eye(a0.shape[0]), np.eye(a0.shape[0]))
 
         # Forward coordinates change of states and models
         self.a0 = self.change_coordinates(self.a0, matrix=True)
         self.da = self.change_coordinates(self.da, matrix=True)
-        self.d = self.change_coordinates(self.d, offset=False)
-        self.x_i_t = self.change_coordinates(self.x_i)
+        self.b = self.change_coordinates(self.b, offset=False)
+        self.x_i_t = np.array(self.change_coordinates([x for x in self.x_i]))
+
+    def set_control(self, control, state=None):
+        if state is not None:
+            control = control - self.k @ state  # the Kx part of the control is already present in A0.
+        self.u = control
 
     def change_coordinates(self, value, matrix=False, back=False, interval=False, offset=True):
         """
@@ -138,10 +218,14 @@ class LPV(object):
             return value
         transformation, transformation_inv = self.coordinates
         if interval:
-            value = intervals_product(
-                [self.coordinates[0], self.coordinates[0]],
-                value[:, :, np.newaxis]).squeeze() + offset * np.array([self.center, self.center])
-            return value
+            if back:
+                value = intervals_scaling(transformation,
+                    value[:, :, np.newaxis]).squeeze() + offset * np.array([self.center, self.center])
+                return value
+            else:
+                value = value - offset * np.array([self.center, self.center])
+                value = intervals_scaling(transformation_inv, value[:, :, np.newaxis]).squeeze()
+                return value
         elif matrix:  # Matrix
             if back:
                 return transformation @ value @ transformation_inv
@@ -149,33 +233,55 @@ class LPV(object):
                 return transformation_inv @ value @ transformation
         elif isinstance(value, list):  # List
             return [self.change_coordinates(v, back) for v in value]
-        elif len(value.shape) == 2:
-                for t in range(value.shape[0]):  # Array of vectors
-                    value[t, :] = self.change_coordinates(value[t, :], back=back)
-                return value
-        elif len(value.shape) == 1:  # Vector
+        else:
             if back:
-                return transformation @ value + offset * self.center
+                value = transformation @ value
+                if offset:
+                    value += self.center
+                return value
             else:
-                return transformation_inv @ (value - offset * self.center)
+                if offset:
+                    value -= self.center
+                return transformation_inv @ value
 
     def step(self, dt):
-        self.x_i_t = self.step_interval_predictor(self.x_i_t, dt)
+        if is_metzler(self.a0):
+            self.x_i_t = self.step_interval_predictor(self.x_i_t, dt)
+        else:
+            self.x_i_t = self.step_naive_predictor(self.x_i_t, dt)
+        dx = self.a0 @ self.x_t + self.b @ self.u.squeeze(-1)
+        self.x_t = self.x_t + dx * dt
 
-    def step_interval_observer(self, x_i, dt):
-        a0, da, d = self.a0, self.da, self.d
+    def step_naive_predictor(self, x_i, dt):
+        """
+            Step an interval predictor with box uncertainty.
+
+        :param x_i: state interval at time t
+        :param dt: time step
+        :return: state interval at time t+dt
+        """
+        a0, da, d, omega_i, b, u = self.a0, self.da, self.d, self.omega_i, self.b, self.u
         a_i = a0 + sum(intervals_product([0, 1], [da_i, da_i]) for da_i in da)
-        dx_i = intervals_product(a_i, x_i) + d
+        bu = (b @ u).squeeze(-1)
+        dx_i = intervals_product(a_i, x_i) + intervals_product([d, d], omega_i) + np.array([bu, bu])
         return x_i + dx_i*dt
 
     def step_interval_predictor(self, x_i, dt):
-        a0, da, d = self.a0, self.da, self.d
+        """
+            Step an interval predictor with polytopic uncertainty.
+
+        :param x_i: state interval at time t
+        :param dt: time step
+        :return: state interval at time t+dt
+        """
+        a0, da, d, omega_i, b, u = self.a0, self.da, self.d, self.omega_i, self.b, self.u
         p = lambda x: np.maximum(x, 0)
         n = lambda x: np.maximum(-x, 0)
         da_p = sum(p(da_i) for da_i in da)
         da_n = sum(n(da_i) for da_i in da)
         x_m, x_M = x_i[0, :, np.newaxis], x_i[1, :, np.newaxis]
-        dx_m = a0 @ x_m - da_p @ n(x_m) - da_n @ p(x_M) + d[:, np.newaxis]
-        dx_M = a0 @ x_M + da_p @ p(x_M) + da_n @ n(x_m) + d[:, np.newaxis]
+        o_m, o_M = omega_i[0, :, np.newaxis], omega_i[1, :, np.newaxis]
+        dx_m = a0 @ x_m - da_p @ n(x_m) - da_n @ p(x_M) + p(d) @ o_m - n(d) @ o_M + b @ u
+        dx_M = a0 @ x_M + da_p @ p(x_M) + da_n @ n(x_m) + p(d) @ o_M - n(d) @ o_m + b @ u
         dx_i = np.array([dx_m.squeeze(axis=-1), dx_M.squeeze(axis=-1)])
         return x_i + dx_i * dt

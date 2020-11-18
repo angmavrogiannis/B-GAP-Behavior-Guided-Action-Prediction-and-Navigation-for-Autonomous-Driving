@@ -1,3 +1,6 @@
+import sys
+
+print(sys.version)
 from setuptools import setup, find_packages
 
 setup(

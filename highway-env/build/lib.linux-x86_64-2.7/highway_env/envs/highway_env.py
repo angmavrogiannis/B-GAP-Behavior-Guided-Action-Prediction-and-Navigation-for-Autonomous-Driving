@@ -1,12 +1,12 @@
-from __future__ import division, print_function, absolute_import
 import numpy as np
+from typing import Dict, Tuple
 from gym.envs.registration import register
 
 from highway_env import utils
 from highway_env.envs.common.abstract import AbstractEnv
 from highway_env.road.road import Road, RoadNetwork
-from highway_env.vehicle.control import MDPVehicle
- 
+from highway_env.vehicle.controller import MDPVehicle
+
 
 class HighwayEnv(AbstractEnv):
     """
@@ -16,88 +16,58 @@ class HighwayEnv(AbstractEnv):
         staying on the rightmost lanes and avoiding collisions.
     """
 
-    COLLISION_REWARD = -1
+    COLLISION_REWARD: float = -10
     """ The reward received when colliding with a vehicle."""
-    RIGHT_LANE_REWARD = 0.1
+    RIGHT_LANE_REWARD: float = 0.2
     """ The reward received when driving on the right-most lanes, linearly mapped to zero for other lanes."""
-    HIGH_VELOCITY_REWARD = 0.4
+    HIGH_VELOCITY_REWARD: float = 1
     """ The reward received when driving at full speed, linearly mapped to zero for lower speeds."""
-    LANE_CHANGE_REWARD = 0
+    LANE_CHANGE_REWARD: float = 0.5
     """ The reward received at each lane change action."""
 
-    def default_config(self):
+    def default_config(self) -> dict:
         config = super().default_config()
         config.update({
             "observation": {
                 "type": "Kinematics"
             },
             "lanes_count": 4,
-            "vehicles_count": 40,
-            "controlled_vehicles":1,
-            # aggressive vehicles
-            "aggressive_vehicle_type": "highway_env.vehicle.behavior.AggressiveCar",
-            "aggressive_vehicle_type2": "highway_env.vehicle.behavior.VeryAggressiveCar",
-            "num_aggressive": 0,
-            "duration": 40,  # [s]
+            "vehicles_count": 80,
+            "duration": 20,  # [s]
             "initial_spacing": 1,
             "collision_reward": self.COLLISION_REWARD
         })
         return config
 
-    def reset(self):
+    def reset(self) -> np.ndarray:
         self._create_road()
         self._create_vehicles()
         self.steps = 0
-        return super(HighwayEnv, self).reset()
+        return super().reset()
 
-    def step(self, action):
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         self.steps += 1
-        state_copy = self.simplify()
-        vehicles_list = state_copy.road.vehicles
-        # print(vehicles_list)
-        pos_list = []
-        for v in vehicles_list:
-            pos_list.append([v.position, v.counter])
-        # removed pos_list from the returned arguments
-        return super(HighwayEnv, self).step(action)
+        return super().step(action)
 
-    def _create_road(self):
+    def _create_road(self) -> None:
         """
             Create a road composed of straight adjacent lanes.
         """
         self.road = Road(network=RoadNetwork.straight_road_network(self.config["lanes_count"]),
                          np_random=self.np_random, record_history=self.config["show_trajectories"])
 
-    def _create_vehicles(self):
+    def _create_vehicles(self) -> None:
         """
             Create some new random vehicles of a given type, and add them on the road.
         """
         self.vehicle = MDPVehicle.create_random(self.road, 25, spacing=self.config["initial_spacing"])
         self.road.vehicles.append(self.vehicle)
 
-        # create conservative cars on the road
-        vehicles_type1 = utils.class_from_path(self.config["other_vehicles_type"])
-        vehicles_type2 = utils.class_from_path(self.config["aggressive_vehicle_type"])
-        vehicles_type3 = utils.class_from_path(self.config["aggressive_vehicle_type2"])
-        # add some aggressive vehicles in the road
-        count_aggressive = 0
-        for _ in range(self.config["vehicles_count"]+self.config["num_aggressive"]):
-            a = np.random.randint(low=1, high=5)
-            if a==1:
-                count_aggressive += 1
-                self.road.vehicles.append(vehicles_type2.create_random(self.road))
-                if count_aggressive < 3:
-                    self.road.vehicles.append(vehicles_type3.create_random(self.road))
-                    
-            else:
-                self.road.vehicles.append(vehicles_type1.create_random(self.road))
-        
-        print("number of aggressive vehicles ",count_aggressive)
+        vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
+        for _ in range(self.config["vehicles_count"]):
+            self.road.vehicles.append(vehicles_type.create_random(self.road))
 
-        # create an empty list and then insert randomly
-        
-
-    def _reward(self, action):
+    def _reward(self, action: int) -> float:
         """
         The reward is defined to foster driving at high speed, on the rightmost lanes, and to avoid collisions.
         :param action: the last action performed
@@ -113,13 +83,13 @@ class HighwayEnv(AbstractEnv):
                            [self.config["collision_reward"], self.HIGH_VELOCITY_REWARD+self.RIGHT_LANE_REWARD],
                            [0, 1])
 
-    def _is_terminal(self):
+    def _is_terminal(self) -> bool:
         """
             The episode is over if the ego vehicle crashed or the time is out.
         """
         return self.vehicle.crashed or self.steps >= self.config["duration"]
 
-    def _cost(self, action):
+    def _cost(self, action: int) -> float:
         """
             The cost signal is the occurrence of collision
         """

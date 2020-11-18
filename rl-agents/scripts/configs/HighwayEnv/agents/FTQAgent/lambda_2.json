@@ -1,0 +1,4 @@
+{
+    "base_config": "configs/HighwayEnv/agents/FTQAgent/baseline.json",
+    "constraint_penalty": -2.0
+}

@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: highway-env
+Version: 1.0.dev0
+Summary: An environment for simulated highway driving tasks
+Home-page: https://github.com/eleurent/highway-env
+Author: Edouard Leurent
+Author-email: eleurent@gmail.com
+License: MIT
+Description: UNKNOWN
+Keywords: autonomous highway driving simulation environment reinforcement learning
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Researchers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.6
+Provides-Extra: dev
+Provides-Extra: deploy

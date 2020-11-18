@@ -1,0 +1,8 @@
+{
+    "base_config": "configs/HighwayEnv/agents/OLOPAgent/baseline.json",
+    "upper_bound": {
+        "type": "hoeffding",
+        "c": 4
+    },
+    "lazy_tree_construction": true
+}

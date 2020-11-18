@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: rl-agents
+Version: 1.0.dev0
+Summary: A collection of Reinforcement Learning agents
+Home-page: https://github.com/eleurent/rl-agents
+Author: Edouard Leurent
+Author-email: eleurent@gmail.com
+License: MIT
+Description: UNKNOWN
+Keywords: reinforcement learning agents
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Researchers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.5
+Provides-Extra: dev

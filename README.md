@@ -1,40 +1,74 @@
-# Autonomous Decision Making Dense Traffic
+# B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation
+This repository contains code and technical details for the paper we submitted to ICRA 2021:
 
-# Dependencies
-This project requires the following libraries:
-- python3 
-- pytorch
-- tensorboardX
+**[B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation](https://arxiv.org/abs/2011.03748)**
 
-To install the binaries for PyTorch 1.6.0, simply run
+Authors: Angelos Mavrogiannis, Rohan Chandra, and Dinesh Manocha
+
+Please cite our work if you found it useful:
+
+```
+@article{mavrogiannis2020bgap,
+  title={B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation},
+  author={Mavrogiannis, Angelos and Chandra, Rohan and Manocha, Dinesh},
+  journal={arXiv preprint arXiv:2011.03748},
+  year={2020}
+}
+```
+
+## Overview
+We present a novel learning algorithm for action prediction and local navigation for autonomous driving. Our approach classifies the driver behavior of other vehicles or road-agents (aggressive or conservative) and takes that into account for decision making and safe driving. We present a behavior-driven simulator that can generate trajectories corresponding to different levels of aggressive behaviors and use our simulator to train a policy using graph convolutional networks. We use a reinforcement learning-based navigation scheme that uses a proximity graph of traffic agents and computes a safe trajectory for the ego-vehicle that accounts for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. We have integrated our algorithm with OpenAI gym-based "Highway-Env" simulator and demonstrate the benefits in terms of improved navigation in different scenarios.
+
+## Dependencies
+```python
+Python: ">=3.6"
+PyTorch: ">=1.4.0"
+PyTorch Geometric
+TensorBoard
+```
+
+### Installing PyTorch Geometric
+
+To install the binaries for PyTorch 1.7.0, simply run
 
 ```sh
-$ pip install torch-scatter==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-$ pip install torch-sparse==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-$ pip install torch-cluster==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.6.0.html
-$ pip install torch-spline-conv==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.6.0.html
+$ pip install torch-scatter==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.7.0.html
+$ pip install torch-sparse==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.7.0.html
+$ pip install torch-cluster==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.7.0.html
+$ pip install torch-spline-conv==latest+${CUDA} -f https://pytorch-geometric.com/whl/torch-1.7.0.html
 $ pip install torch-geometric
 ```
 
-where `${CUDA}` should be replaced by `cpu` depending on your PyTorch installation.
+where `${CUDA}` should be replaced by either `cpu`, `cu92`, `cu101`, `cu102`, or `cu110` and `torch-1.7.0` should be replaced by `torch-1.4.0`, `torch-1.5.0`, `torch-1.5.1`, or `torch-1.6.0` depending on your PyTorch installation.
 
-For instructions compatible with older PyTorch versions, documentation and examples, go *[here](https://github.com/rusty1s/pytorch_geometric)*.
+## Usage
+### Build
+First, build the code using the following commands:
 
-# Build instructions
-First build the code using the following commands:
 ```
 cd highway-env/
 sudo python3 setup.py install
 cd ../rl-agents/
 sudo python3 setup.py install
 ```
-# Run instructions
-To train the dqn agent run the following command by navigating to the `rl-agents/scripts/` subdirectory:
+
+In case `python3` points to an older python version, either update the default python3 version, or replace `python3` with the path to the python version you intend to use.
+
+### Training and Testing
+To train the GCN agent run the following command by navigating to the `rl-agents/scripts/` subdirectory:
+
 ```
-python3 experiments.py evaluate configs/HighwayEnv/env.json configs/HighwayEnv/agents/DQNAgent/dqn.json --train --episodes=2000 --name-from-config
+python experiments.py evaluate configs/HighwayEnv/env.json configs/HighwayEnv/agents/DQNAgent/gcn.json --train --episodes=2000 --name-from-config
 ```
 
-To train the agent using fitted Q iteration run the following command from the same subdirectory:
+To test the GCN agent run the following command from the same directory:
+
 ```
-python3 experiments.py evaluate configs/HighwayEnv/env.json configs/HighwayEnv/agents/FTQAgent/baseline.json --train --episodes=2000 --name-from-config
+python experiments.py evaluate configs/HighwayEnv/env.json configs/HighwayEnv/agents/DQNAgent/gcn.json --test --episodes=10 --name-from-config --recover-from=/path/to/output/folder
 ```
+
+where `/path/to/output/folder` should correspond to the output file of the trained model. Trained models are saved in the subdirectory `/rl-agents/scripts/out/HighwayEnv/DQNAgent/`. Add `--no-display` to disable rendering of the environment.
+
+To change the structure of the GCN or modify the parameters for the training, modify [gcn.json](../blob/master/rl-agents/scripts/configs/HighwayEnv/agents/DQNAgent/gcn.json).
+
+## Results

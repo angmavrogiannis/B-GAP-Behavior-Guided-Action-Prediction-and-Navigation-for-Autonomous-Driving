@@ -185,3 +185,5 @@ As the default simulator does not contain any behavior-rich trajectories, the eg
 ### Behavior-Guided Actions
 - **Conservative Traffic**: The ego-vehicle learns to confidently overtake slow-moving traffic. This reduces its average speed, but increases the number of lane changes.
 - **Aggressive Traffic**: The ego-vehicle learns to act carefully around aggressive drivers, choosing to stay in the same lane. This result in fewer lane changes and safer navigation, as compared to the one observed in current AVs.
+
+For visualized results and comparison, please watch the **[video](https://youtu.be/AKa0esw88sQ)** submitted as supplementary material.

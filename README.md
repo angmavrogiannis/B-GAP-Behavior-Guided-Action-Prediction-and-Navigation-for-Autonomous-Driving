@@ -134,7 +134,7 @@ We evaluate two models -- Multi-layer Perceptron (MLP) and GCN in dense traffic 
     </tbody>
 </table>
 
-### Sparse Traffic (n = 10 vehicles
+### Sparse Traffic (n = 10 vehicles)
 <table>
     <thead>
         <tr>

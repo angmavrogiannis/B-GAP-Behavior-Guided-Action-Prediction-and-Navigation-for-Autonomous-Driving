@@ -71,7 +71,7 @@ sudo python3 setup.py install
 In case `python3` points to an older python version, either update the default python3 version, or replace `python3` with the path to the python version you intend to use.
 
 ### Training and Testing
-To train the GCN agent run the following command by navigating to the `rl-agents/scripts/` subdirectory:
+To train the Graph Convolutional Network (GCN) agent run the following command by navigating to the `rl-agents/scripts/` subdirectory:
 
 ```
 python experiments.py evaluate configs/HighwayEnv/env.json configs/HighwayEnv/agents/DQNAgent/gcn.json --train --episodes=2000 --name-from-config
@@ -88,3 +88,96 @@ where `/path/to/output/folder` should correspond to the output file of the train
 To change the structure of the GCN or modify the parameters for the training, modify [gcn.json](/rl-agents/scripts/configs/HighwayEnv/agents/DQNAgent/gcn.json).
 
 ## Results
+We evaluate two models -- Multi-layer Perceptron (MLP) and GCN in dense traffic scenarios, varying the number of aggressive and conservative agents, and compare the performance of the trained GCN agent in the behavior-rich simulator and the default simulator. We apply two metrics for evaluation over 100 episodes and averaged at test time:
+
+- **Average Speed (Avg. Spd.)** of the ego-vehicle, since it captures the distance per second covered in a varying time interval.
+- **Number of lane changes (#LC)** performed by the ego-vehicle on average during the given duration. In general, fewer lane changes imply that the ego vehicle can cover the same distance with fewer maneuvers. We notice that our approach based on GCN results in approximately 50% reduction in the number of lane changes as compared to MLP.
+
+### Dense Traffic (n = 20)
+<table>
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th colspan=2>Default</th>
+            <th colspan=2>Conservative</th>
+            <th colspan=2>Aggressive</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><i>(n=20)</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+        </tr>
+        <tr>
+            <td style="text-align: center">MLP</td>
+            <td style="text-align: center">22.65</td>
+            <td style="text-align: center">4.10</td>
+            <td style="text-align: center">19.70</td>
+            <td style="text-align: center">2.90</td>
+            <td style="text-align: center">28.80</td>
+           <td style="text-align: center">2.60</td>
+        </tr>
+        <tr>
+            <td style="text-align: center">GCN</td>
+            <td style="text-align: center">22.26</td>
+            <td style="text-align: center">0.82</td>
+            <td style="text-align: center">18.90</td>
+            <td style="text-align: center">2.33</td>
+            <td style="text-align: center">29.00</td>
+            <td style="text-align: center">1.40</td>
+        </tr>
+    </tbody>
+</table>
+
+### Sparse Traffic (n = 10)
+<table>
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th colspan=2>Default</th>
+            <th colspan=2>Conservative</th>
+            <th colspan=2>Aggressive</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><i>(n=20)</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+        </tr>
+        <tr>
+            <td style="text-align: center">MLP</td>
+            <td style="text-align: center">23.75</td>
+            <td style="text-align: center">6.25</td>
+            <td style="text-align: center">21.40</td>
+            <td style="text-align: center">3.50</td>
+            <td style="text-align: center">29.16</td>
+           <td style="text-align: center">2.06</td>
+        </tr>
+        <tr>
+            <td style="text-align: center">GCN</td>
+            <td style="text-align: center">23.60</td>
+            <td style="text-align: center">0.35</td>
+            <td style="text-align: center">20.60</td>
+            <td style="text-align: center">1.60</td>
+            <td style="text-align: center">28.90</td>
+            <td style="text-align: center">1.30</td>
+        </tr>
+    </tbody>
+</table>
+
+### Advantages of Our Behavior-Rich Simulator
+As the default simulator does not contain any behavior-rich trajectories, the ego-vehicle is not able to adjust its average speed and maintains a speed that is approximately the average of the average speeds obtained when operating in conservative and aggressive environments. Furthermore, the ego-vehicle does not follow a realistic lane-changing pattern in the default environment as it performs excessive number of lane changes using the MLP, but mostly follows the traffic with very few lane changes using the GCN.
+
+### Behavior-Guided Actions
+- **Conservative Traffic**: The ego-vehicle learns to confidently overtake slow-moving traffic. This reduces its average speed, but increases the number of lane changes.
+- **Aggressive Traffic**: The ego-vehicle learns to act carefully around aggressive drivers, choosing to stay in the same lane. This result in fewer lane changes and safer navigation, as compared to the one observed in current AVs.

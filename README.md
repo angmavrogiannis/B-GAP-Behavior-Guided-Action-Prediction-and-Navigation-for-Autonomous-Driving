@@ -93,7 +93,7 @@ We evaluate two models -- Multi-layer Perceptron (MLP) and GCN in dense traffic 
 - **Average Speed (Avg. Spd.)** of the ego-vehicle, since it captures the distance per second covered in a varying time interval.
 - **Number of lane changes (#LC)** performed by the ego-vehicle on average during the given duration. In general, fewer lane changes imply that the ego vehicle can cover the same distance with fewer maneuvers. We notice that our approach based on GCN results in approximately 50% reduction in the number of lane changes as compared to MLP.
 
-### Dense Traffic (n = 20)
+### Dense Traffic (n = 20 vehicles)
 <table>
     <thead>
         <tr>
@@ -134,7 +134,7 @@ We evaluate two models -- Multi-layer Perceptron (MLP) and GCN in dense traffic 
     </tbody>
 </table>
 
-### Sparse Traffic (n = 10)
+### Sparse Traffic (n = 10 vehicles
 <table>
     <thead>
         <tr>

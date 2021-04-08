@@ -1,18 +1,18 @@
 # B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation
-This repository contains code and technical details for the paper we submitted to ICRA 2021:
+This repository contains code and technical details for the paper we submitted to IROS 2021:
 
-**[B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation](https://arxiv.org/abs/2011.03748)**
+**[B-GAP: Behavior-Guided Action Prediction and Navigation for Autonomous Driving](https://arxiv.org/abs/2011.03748)**
 
 Authors: Angelos Mavrogiannis, Rohan Chandra, and Dinesh Manocha
 
 Please cite our work if you found it useful:
 
 ```
-@article{mavrogiannis2020bgap,
-  title={B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation},
+@article{mavrogiannis2021bgap,
+  title={B-GAP: Behavior-Guided Action Prediction and Navigation for Autonomous Driving},
   author={Mavrogiannis, Angelos and Chandra, Rohan and Manocha, Dinesh},
   journal={arXiv preprint arXiv:2011.03748},
-  year={2020}
+  year={2021}
 }
 ```
 

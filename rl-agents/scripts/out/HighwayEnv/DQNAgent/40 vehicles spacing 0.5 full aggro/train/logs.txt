@@ -1,0 +1,8 @@
+spacing = 0.5
+a < 6 -> full aggro
+C = -1
+RL = 0.1
+HS = 0.4
+LC = 0
+40 vehicles
+60 seconds

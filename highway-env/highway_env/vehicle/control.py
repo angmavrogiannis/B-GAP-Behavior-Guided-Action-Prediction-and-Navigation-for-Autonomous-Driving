@@ -201,6 +201,7 @@ class MDPVehicle(ControlledVehicle):
         super(MDPVehicle, self).__init__(road, position, heading, velocity, target_lane_index, target_velocity, route)
         self.velocity_index = self.speed_to_index(self.target_velocity)
         self.target_velocity = self.index_to_speed(self.velocity_index)
+        #self.lc = 0
 
     def act(self, action=None):
         """
@@ -217,6 +218,12 @@ class MDPVehicle(ControlledVehicle):
         elif action == "SLOWER":
             self.velocity_index = self.speed_to_index(self.velocity) - 1
         else:
+            # if action == "LANE_RIGHT" or action == "LANE_LEFT":
+            #     _from, _to, _id = self.target_lane_index
+            #     target_lane_index = _from, _to, np.clip(_id + 1, 0, len(self.road.network.graph[_from][_to]) - 1)
+            #     if self.road.network.get_lane(target_lane_index).is_reachable_from(self.position):
+            #         self.lc = +1
+            #         print(self.lc)
             super(MDPVehicle, self).act(action)
             return
         self.velocity_index = np.clip(self.velocity_index, 0, self.SPEED_COUNT - 1)

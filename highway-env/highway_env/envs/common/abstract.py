@@ -78,6 +78,9 @@ class AbstractEnv(gym.Env):
         self.rendering_mode = 'human'
         self.offscreen = self.config.get("offscreen_rendering", False)
         self.enable_auto_render = False
+        self.lc = 0
+        self.speed_vals = []
+        self.prev_lane = None
 
         self.reset()
 

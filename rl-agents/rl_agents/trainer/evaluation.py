@@ -120,6 +120,9 @@ class Evaluation(object):
         self.close()
 
     def run_episodes(self):
+        num_crashes = 0
+        speed = []
+        num_lc = []
         for episode in range(self.num_episodes):
             # Run episode
             terminal = False
@@ -130,17 +133,24 @@ class Evaluation(object):
                 # Step until a terminal step is reached
                 reward, terminal = self.step()
                 rewards.append(reward)
-
+                if self.env.vehicle.crashed:
+                    num_crashes += 1
                 # Catch interruptions
                 try:
                     if self.env.unwrapped.done:
                         return
                 except AttributeError:
                     pass
-
+            num_lc.append(self.env.lc)
+            speed += self.env.speed_vals
             # End of episode
             self.after_all_episodes(episode, rewards)
             self.after_some_episodes(episode, rewards)
+        print('Number of crashes: ', num_crashes)
+        print('Average speed: ', np.mean(speed))
+        print('Std of speed: ', np.std(speed))
+        print('Average # lane changes: ', np.mean(num_lc))
+        print('Std of lane changes: ', np.std(num_lc))
 
     def step(self):
         """

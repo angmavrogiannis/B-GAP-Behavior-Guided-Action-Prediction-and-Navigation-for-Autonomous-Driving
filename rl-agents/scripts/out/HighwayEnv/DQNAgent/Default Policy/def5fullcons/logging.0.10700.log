@@ -1,0 +1,21 @@
+[rl_agents.trainer.evaluation:INFO] Loaded DQNAgent model from out/HighwayEnv/DQNAgent/def 5 vehicles spacing 0.5/train/checkpoint-best.tar 
+[rl_agents.trainer.evaluation:INFO] Episode 0 score: 54.9 
+[rl_agents.trainer.evaluation:INFO] Episode 1 score: 4.1 
+[rl_agents.trainer.evaluation:INFO] Episode 2 score: 54.3 
+[rl_agents.trainer.evaluation:INFO] Episode 3 score: 57.1 
+[rl_agents.trainer.evaluation:INFO] Episode 4 score: 0.3 
+[rl_agents.trainer.evaluation:INFO] Episode 5 score: 52.5 
+[rl_agents.trainer.evaluation:INFO] Episode 6 score: 53.7 
+[rl_agents.trainer.evaluation:INFO] Episode 7 score: 52.3 
+[rl_agents.trainer.evaluation:INFO] Episode 8 score: 59.3 
+[rl_agents.trainer.evaluation:INFO] Episode 9 score: 54.3 
+[rl_agents.trainer.evaluation:INFO] Episode 10 score: 50.9 
+[rl_agents.trainer.evaluation:INFO] Episode 11 score: 53.2 
+[rl_agents.trainer.evaluation:INFO] Episode 12 score: 54.1 
+[rl_agents.trainer.evaluation:INFO] Episode 13 score: 51.1 
+[rl_agents.trainer.evaluation:INFO] Episode 14 score: 57.6 
+[rl_agents.trainer.evaluation:INFO] Episode 15 score: 53.7 
+[rl_agents.trainer.evaluation:INFO] Episode 16 score: 54.1 
+[rl_agents.trainer.evaluation:INFO] Episode 17 score: 55.4 
+[rl_agents.trainer.evaluation:INFO] Episode 18 score: 52.4 
+[rl_agents.trainer.evaluation:INFO] Episode 19 score: 52.6 

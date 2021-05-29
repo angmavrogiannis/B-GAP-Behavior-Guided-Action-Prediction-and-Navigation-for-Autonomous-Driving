@@ -1,51 +1,39 @@
 import copy
-from typing import List, Union, Tuple, Optional
+import os
+from typing import List, Tuple, Optional, Callable
 import gym
-from gym import spaces
+from gym import Wrapper
 from gym.utils import seeding
 import numpy as np
 
 from highway_env import utils
-from highway_env.envs.common.observation import observation_factory
+from highway_env.envs.common.action import action_factory, Action, DiscreteMetaAction, ActionType
+from highway_env.envs.common.observation import observation_factory, ObservationType
 from highway_env.envs.common.finite_mdp import finite_mdp
 from highway_env.envs.common.graphics import EnvViewer
 from highway_env.vehicle.behavior import IDMVehicle, LinearVehicle
 from highway_env.vehicle.controller import MDPVehicle
+from highway_env.vehicle.kinematics import Vehicle
 
-Action = Union[int, np.ndarray]
 Observation = np.ndarray
 
 
 class AbstractEnv(gym.Env):
-    """
-        A generic environment for various tasks involving a vehicle driving on a road.
 
-        The environment contains a road populated with vehicles, and a controlled ego-vehicle that can change lane and
-        velocity. The action space is fixed, but the observation space and reward function must be defined in the
-        environment implementations.
     """
+    A generic environment for various tasks involving a vehicle driving on a road.
+
+    The environment contains a road populated with vehicles, and a controlled ego-vehicle that can change lane and
+    speed. The action space is fixed, but the observation space and reward function must be defined in the
+    environment implementations.
+    """
+    observation_type: ObservationType
+    action_type: ActionType
+    automatic_rendering_callback: Optional[Callable]
     metadata = {'render.modes': ['human', 'rgb_array']}
 
-    ACTIONS = {0: 'LANE_LEFT',
-               1: 'IDLE',
-               2: 'LANE_RIGHT',
-               3: 'FASTER',
-               4: 'SLOWER'}
-    """
-        A mapping of action indexes to action labels
-    """
-    ACTIONS_INDEXES = {v: k for k, v in ACTIONS.items()}
-    """
-        A mapping of action labels to action indexes
-    """
-
     PERCEPTION_DISTANCE = 6.0 * MDPVehicle.SPEED_MAX
-    """
-        The maximum distance of any vehicle present in the observation [m]
-    """
-
-    STEERING_RANGE = np.pi / 4
-    ACCELERATION_RANGE = 5.0
+    """The maximum distance of any vehicle present in the observation [m]"""
 
     def __init__(self, config: dict = None) -> None:
         # Configuration
@@ -59,11 +47,12 @@ class AbstractEnv(gym.Env):
 
         # Scene
         self.road = None
-        self.vehicle = None
+        self.controlled_vehicles = []
 
         # Spaces
-        self.observation = None
+        self.action_type = None
         self.action_space = None
+        self.observation_type = None
         self.observation_space = None
         self.define_spaces()
 
@@ -78,15 +67,28 @@ class AbstractEnv(gym.Env):
         self.should_update_rendering = True
         self.rendering_mode = 'human'
         self.enable_auto_render = False
+        self.lc = 0
+        self.speed_vals = []
+        self.prev_lane = None
 
         self.reset()
+
+    @property
+    def vehicle(self) -> Vehicle:
+        """First (default) controlled vehicle."""
+        return self.controlled_vehicles[0] if self.controlled_vehicles else None
+
+    @vehicle.setter
+    def vehicle(self, vehicle: Vehicle) -> None:
+        """Set a unique controlled vehicle."""
+        self.controlled_vehicles = [vehicle]
 
     @classmethod
     def default_config(cls) -> dict:
         """
-            Default environment configuration.
+        Default environment configuration.
 
-            Can be overloaded in environment implementations, or by calling configure().
+        Can be overloaded in environment implementations, or by calling configure().
         :return: a configuration dict
         """
         return {
@@ -94,7 +96,7 @@ class AbstractEnv(gym.Env):
                 "type": "TimeToCollision"
             },
             "action": {
-                "type": "Discrete"
+                "type": "DiscreteMetaAction"
             },
             "simulation_frequency": 15,  # [Hz]
             "policy_frequency": 1,  # [Hz]
@@ -105,7 +107,8 @@ class AbstractEnv(gym.Env):
             "scaling": 5.5,
             "show_trajectories": False,
             "render_agent": True,
-            "offscreen_rendering": False
+            "offscreen_rendering": os.environ.get("OFFSCREEN_RENDERING", "0") == "1",
+            "manual_control": False
         }
 
     def seed(self, seed: int = None) -> List[int]:
@@ -117,17 +120,17 @@ class AbstractEnv(gym.Env):
             self.config.update(config)
 
     def define_spaces(self) -> None:
-        self.observation = observation_factory(self, self.config["observation"])
-        self.observation_space = self.observation.space()
-
-        if self.config["action"]["type"] == "Discrete":
-            self.action_space = spaces.Discrete(len(self.ACTIONS))
-        elif self.config["action"]["type"] == "Continuous":
-            self.action_space = spaces.Box(-1., 1., shape=(2,), dtype=np.float32)
+        """
+        Set the types and spaces of observation and action from config.
+        """
+        self.observation_type = observation_factory(self, self.config["observation"])
+        self.action_type = action_factory(self, self.config["action"])
+        self.observation_space = self.observation_type.space()
+        self.action_space = self.action_type.space()
 
     def _reward(self, action: Action) -> float:
         """
-            Return the reward associated with performing a given action and ending up in the current state.
+        Return the reward associated with performing a given action and ending up in the current state.
 
         :param action: the last action performed
         :return: the reward
@@ -136,17 +139,17 @@ class AbstractEnv(gym.Env):
 
     def _is_terminal(self) -> bool:
         """
-            Check whether the current state is a terminal state
+        Check whether the current state is a terminal state
+
         :return:is the state terminal
         """
         raise NotImplementedError
 
     def _cost(self, action: Action) -> float:
         """
-            A constraint metric, for budgeted MDP.
+        A constraint metric, for budgeted MDP.
 
-            If a constraint is defined, it must be used with an alternate reward that doesn't contain it
-            as a penalty.
+        If a constraint is defined, it must be used with an alternate reward that doesn't contain it as a penalty.
         :param action: the last action performed
         :return: the constraint signal, the alternate (constraint-free) reward
         """
@@ -154,34 +157,47 @@ class AbstractEnv(gym.Env):
 
     def reset(self) -> Observation:
         """
-            Reset the environment to it's initial configuration
+        Reset the environment to it's initial configuration
+
         :return: the observation of the reset state
         """
-        self.time = 0
+        self.define_spaces()  # First, to set the controlled vehicle class depending on action space
+        self.time = self.steps = 0
         self.done = False
-        self.define_spaces()
-        return self.observation.observe()
+        self._reset()
+        self.define_spaces()  # Second, to link the obs and actions to the vehicles once the scene is created
+        return self.observation_type.observe()
+
+    def _reset(self) -> None:
+        """
+        Reset the scene: roads and vehicles.
+
+        This method must be overloaded by the environments.
+        """
+        raise NotImplementedError()
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, dict]:
         """
-            Perform an action and step the environment dynamics.
+        Perform an action and step the environment dynamics.
 
-            The action is executed by the ego-vehicle, and all other vehicles on the road performs their default
-            behaviour for several simulation timesteps until the next decision making step.
-        :param int action: the action performed by the ego-vehicle
+        The action is executed by the ego-vehicle, and all other vehicles on the road performs their default behaviour
+        for several simulation timesteps until the next decision making step.
+
+        :param action: the action performed by the ego-vehicle
         :return: a tuple (observation, reward, terminal, info)
         """
         if self.road is None or self.vehicle is None:
             raise NotImplementedError("The road and vehicle must be initialized in the environment implementation")
 
+        self.steps += 1
         self._simulate(action)
 
-        obs = self.observation.observe()
+        obs = self.observation_type.observe()
         reward = self._reward(action)
         terminal = self._is_terminal()
 
         info = {
-            "velocity": self.vehicle.velocity,
+            "speed": self.vehicle.speed,
             "crashed": self.vehicle.crashed,
             "action": action,
         }
@@ -193,20 +209,13 @@ class AbstractEnv(gym.Env):
         return obs, reward, terminal, info
 
     def _simulate(self, action: Optional[Action] = None) -> None:
-        """
-            Perform several steps of simulation with constant action
-        """
-        for k in range(int(self.config["simulation_frequency"] // self.config["policy_frequency"])):
-            if action is not None and \
-                    self.time % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
-                # Forward action to the vehicle
-                if self.config["action"]["type"] == "Discrete":
-                    self.vehicle.act(self.ACTIONS[action])
-                elif self.config["action"]["type"] == "Continuous":
-                    self.vehicle.act({
-                        "acceleration": action[0] * self.ACCELERATION_RANGE,
-                        "steering": action[1] * self.STEERING_RANGE
-                    })
+        """Perform several steps of simulation with constant action."""
+        for _ in range(int(self.config["simulation_frequency"] // self.config["policy_frequency"])):
+            # Forward action to the vehicle
+            if action is not None \
+                    and not self.config["manual_control"] \
+                    and self.time % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
+                self.action_type.act(action)
 
             self.road.act()
             self.road.step(1 / self.config["simulation_frequency"])
@@ -223,9 +232,9 @@ class AbstractEnv(gym.Env):
 
     def render(self, mode: str = 'human') -> Optional[np.ndarray]:
         """
-            Render the environment.
+        Render the environment.
 
-            Create a viewer if none exists, and use it to render an image.
+        Create a viewer if none exists, and use it to render an image.
         :param mode: the rendering mode
         """
         self.rendering_mode = mode
@@ -233,7 +242,7 @@ class AbstractEnv(gym.Env):
         if self.viewer is None:
             self.viewer = EnvViewer(self)
 
-        self.enable_auto_render = not self.viewer.offscreen
+        self.enable_auto_render = True
 
         # If the frame has already been rendered, do nothing
         if self.should_update_rendering:
@@ -248,9 +257,9 @@ class AbstractEnv(gym.Env):
 
     def close(self) -> None:
         """
-            Close the environment.
+        Close the environment.
 
-            Will close the environment viewer if it exists.
+        Will close the environment viewer if it exists.
         """
         self.done = True
         if self.viewer is not None:
@@ -259,48 +268,53 @@ class AbstractEnv(gym.Env):
 
     def get_available_actions(self) -> List[int]:
         """
-            Get the list of currently available actions.
+        Get the list of currently available actions.
 
-            Lane changes are not available on the boundary of the road, and velocity changes are not available at
-            maximal or minimal velocity.
+        Lane changes are not available on the boundary of the road, and speed changes are not available at
+        maximal or minimal speed.
 
         :return: the list of available actions
         """
-        actions = [self.ACTIONS_INDEXES['IDLE']]
+        if not isinstance(self.action_type, DiscreteMetaAction):
+            raise ValueError("Only discrete meta-actions can be unavailable.")
+        actions = [self.action_type.actions_indexes['IDLE']]
         for l_index in self.road.network.side_lanes(self.vehicle.lane_index):
             if l_index[2] < self.vehicle.lane_index[2] \
-                    and self.road.network.get_lane(l_index).is_reachable_from(self.vehicle.position):
-                actions.append(self.ACTIONS_INDEXES['LANE_LEFT'])
+                    and self.road.network.get_lane(l_index).is_reachable_from(self.vehicle.position) \
+                    and self.action_type.lateral:
+                actions.append(self.action_type.actions_indexes['LANE_LEFT'])
             if l_index[2] > self.vehicle.lane_index[2] \
-                    and self.road.network.get_lane(l_index).is_reachable_from(self.vehicle.position):
-                actions.append(self.ACTIONS_INDEXES['LANE_RIGHT'])
-        if self.vehicle.velocity_index < self.vehicle.SPEED_COUNT - 1:
-            actions.append(self.ACTIONS_INDEXES['FASTER'])
-        if self.vehicle.velocity_index > 0:
-            actions.append(self.ACTIONS_INDEXES['SLOWER'])
+                    and self.road.network.get_lane(l_index).is_reachable_from(self.vehicle.position) \
+                    and self.action_type.lateral:
+                actions.append(self.action_type.actions_indexes['LANE_RIGHT'])
+        if self.vehicle.speed_index < self.vehicle.SPEED_COUNT - 1 and self.action_type.longitudinal:
+            actions.append(self.action_type.actions_indexes['FASTER'])
+        if self.vehicle.speed_index > 0 and self.action_type.longitudinal:
+            actions.append(self.action_type.actions_indexes['SLOWER'])
         return actions
 
     def _automatic_rendering(self) -> None:
         """
-            Automatically render the intermediate frames while an action is still ongoing.
-            This allows to render the whole video and not only single steps corresponding to agent decision-making.
+        Automatically render the intermediate frames while an action is still ongoing.
 
-            If a callback has been set, use it to perform the rendering. This is useful for the environment wrappers
-            such as video-recording monitor that need to access these intermediate renderings.
+        This allows to render the whole video and not only single steps corresponding to agent decision-making.
+
+        If a callback has been set, use it to perform the rendering. This is useful for the environment wrappers
+        such as video-recording monitor that need to access these intermediate renderings.
         """
         if self.viewer is not None and self.enable_auto_render:
             self.should_update_rendering = True
 
-            if self.automatic_rendering_callback:
+            if self.automatic_rendering_callback is not None:
                 self.automatic_rendering_callback()
             else:
                 self.render(self.rendering_mode)
 
     def simplify(self) -> 'AbstractEnv':
         """
-            Return a simplified copy of the environment where distant vehicles have been removed from the road.
+        Return a simplified copy of the environment where distant vehicles have been removed from the road.
 
-            This is meant to lower the policy computational load while preserving the optimal actions set.
+        This is meant to lower the policy computational load while preserving the optimal actions set.
 
         :return: a simplified environment state
         """
@@ -312,7 +326,8 @@ class AbstractEnv(gym.Env):
 
     def change_vehicles(self, vehicle_class_path: str) -> 'AbstractEnv':
         """
-            Change the type of all vehicles on the road
+        Change the type of all vehicles on the road
+
         :param vehicle_class_path: The path of the class of behavior for other vehicles
                              Example: "highway_env.vehicle.behavior.IDMVehicle"
         :return: a new environment with modified behavior model for other vehicles
@@ -347,16 +362,16 @@ class AbstractEnv(gym.Env):
         field, value = args
         env_copy = copy.deepcopy(self)
         for v in env_copy.road.vehicles:
-            if isinstance(v, LinearVehicle):
+            if v is not self.vehicle:
                 setattr(v, field, value)
         return env_copy
 
-    def call_vehicle_method(self, args: Tuple[str, Tuple]) -> 'AbstractEnv':
-        method, args = args
+    def call_vehicle_method(self, args: Tuple[str, Tuple[object]]) -> 'AbstractEnv':
+        method, method_args = args
         env_copy = copy.deepcopy(self)
         for i, v in enumerate(env_copy.road.vehicles):
             if hasattr(v, method):
-                env_copy.road.vehicles[i] = getattr(v, method)(*args)
+                env_copy.road.vehicles[i] = getattr(v, method)(*method_args)
         return env_copy
 
     def randomize_behaviour(self) -> 'AbstractEnv':
@@ -370,9 +385,7 @@ class AbstractEnv(gym.Env):
         return finite_mdp(self, time_quantization=1/self.config["policy_frequency"])
 
     def __deepcopy__(self, memo):
-        """
-            Perform a deep copy but without copying the environment viewer.
-        """
+        """Perform a deep copy but without copying the environment viewer."""
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
@@ -382,3 +395,11 @@ class AbstractEnv(gym.Env):
             else:
                 setattr(result, k, None)
         return result
+
+
+class MultiAgentWrapper(Wrapper):
+    def step(self, action):
+        obs, reward, done, info = super().step(action)
+        reward = info["agents_rewards"]
+        done = info["agents_dones"]
+        return obs, reward, done, info

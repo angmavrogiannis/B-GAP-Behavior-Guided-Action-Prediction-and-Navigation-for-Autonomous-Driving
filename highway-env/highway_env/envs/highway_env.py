@@ -16,13 +16,13 @@ class HighwayEnv(AbstractEnv):
         staying on the rightmost lanes and avoiding collisions.
     """
 
-    COLLISION_REWARD = -10
+    COLLISION_REWARD = -1
     """ The reward received when colliding with a vehicle."""
-    RIGHT_LANE_REWARD = 0.2
+    RIGHT_LANE_REWARD = 0.1
     """ The reward received when driving on the right-most lanes, linearly mapped to zero for other lanes."""
-    HIGH_VELOCITY_REWARD = 1
+    HIGH_VELOCITY_REWARD = 0.4
     """ The reward received when driving at full speed, linearly mapped to zero for lower speeds."""
-    LANE_CHANGE_REWARD = 0.5
+    LANE_CHANGE_REWARD = 0
     """ The reward received at each lane change action."""
 
     def default_config(self):
@@ -32,13 +32,13 @@ class HighwayEnv(AbstractEnv):
                 "type": "Kinematics"
             },
             "lanes_count": 4,
-            "vehicles_count": 40,
+            "vehicles_count": 5,
             "controlled_vehicles":1,
             # aggressive vehicles
             "aggressive_vehicle_type": "highway_env.vehicle.behavior.AggressiveCar",
             "aggressive_vehicle_type2": "highway_env.vehicle.behavior.VeryAggressiveCar",
             "num_aggressive": 0,
-            "duration": 40,  # [s]
+            "duration": 60,  # [s]
             "initial_spacing": 1,
             "collision_reward": self.COLLISION_REWARD
         })
@@ -47,11 +47,18 @@ class HighwayEnv(AbstractEnv):
     def reset(self):
         self._create_road()
         self._create_vehicles()
+        self.lc = 0
+        self.speed_vals = []
         self.steps = 0
         return super(HighwayEnv, self).reset()
 
     def step(self, action):
         self.steps += 1
+        if self.prev_lane is not None:
+            if self.vehicle.lane_index[-1] != self.prev_lane:
+                self.lc += 1
+        self.speed_vals.append(self.vehicle.velocity)
+        self.prev_lane = self.vehicle.lane_index[-1]
         state_copy = self.simplify()
         vehicles_list = state_copy.road.vehicles
         # print(vehicles_list)
@@ -83,14 +90,14 @@ class HighwayEnv(AbstractEnv):
         count_aggressive = 0
         for _ in range(self.config["vehicles_count"]+self.config["num_aggressive"]):
             a = np.random.randint(low=1, high=5)
-            if a==1:
+            if a < 3:
                 count_aggressive += 1
-                self.road.vehicles.append(vehicles_type2.create_random(self.road))
-                if count_aggressive < 3:
-                    self.road.vehicles.append(vehicles_type3.create_random(self.road))
+                self.road.vehicles.append(vehicles_type2.create_random(self.road, spacing=0.5))
+                # if count_aggressive < 3:
+                #     self.road.vehicles.append(vehicles_type3.create_random(self.road, spacing=0.5))
                     
             else:
-                self.road.vehicles.append(vehicles_type1.create_random(self.road))
+                self.road.vehicles.append(vehicles_type1.create_random(self.road, spacing=0.5))
         
         print("number of aggressive vehicles ",count_aggressive)
 

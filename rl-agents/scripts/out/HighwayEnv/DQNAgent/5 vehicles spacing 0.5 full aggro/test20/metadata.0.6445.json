@@ -1,0 +1,62 @@
+{
+    "agent": {
+        "__class__": "<class 'rl_agents.agents.deep_q_network.pytorch.DQNAgent'>",
+        "batch_size": 32,
+        "device": "cuda:best",
+        "double": false,
+        "exploration": {
+            "final_temperature": 0.05,
+            "method": "EpsilonGreedy",
+            "tau": 6000,
+            "temperature": 1.0
+        },
+        "gamma": 0.8,
+        "loss_function": "l2",
+        "memory_capacity": 15000,
+        "model": {
+            "activation": "RELU",
+            "in": 25,
+            "layers": [
+                256,
+                256
+            ],
+            "out": 5,
+            "reshape": "True",
+            "type": "MultiLayerPerceptron"
+        },
+        "n_steps": 1,
+        "optimizer": {
+            "k": 5,
+            "lr": 0.0005,
+            "type": "ADAM",
+            "weight_decay": 0
+        },
+        "target_update": 50
+    },
+    "env": {
+        "__class__": "<class 'highway_env.envs.highway_env.HighwayEnv'>",
+        "aggressive_vehicle_type": "highway_env.vehicle.behavior.AggressiveCar",
+        "aggressive_vehicle_type2": "highway_env.vehicle.behavior.VeryAggressiveCar",
+        "centering_position": [
+            0.3,
+            0.5
+        ],
+        "collision_reward": -1,
+        "controlled_vehicles": 1,
+        "duration": 60,
+        "id": "highway-v0",
+        "import_module": "highway_env",
+        "initial_spacing": 1,
+        "lanes_count": 4,
+        "num_aggressive": 0,
+        "observation": {
+            "type": "Kinematics"
+        },
+        "other_vehicles_type": "highway_env.vehicle.behavior.IDMVehicle",
+        "policy_frequency": 1,
+        "screen_height": 150,
+        "screen_width": 600,
+        "show_trajectories": false,
+        "vehicles_count": 5
+    }
+}

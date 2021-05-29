@@ -1,18 +1,18 @@
 # B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation
-This repository contains code and technical details for the paper we submitted to IROS 2021:
+This repository contains code and technical details for the paper we submitted to ICRA 2021:
 
-**[B-GAP: Behavior-Guided Action Prediction and Navigation for Autonomous Driving](https://arxiv.org/abs/2011.03748)**
+**[B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation](https://arxiv.org/abs/2011.03748)**
 
 Authors: Angelos Mavrogiannis, Rohan Chandra, and Dinesh Manocha
 
 Please cite our work if you found it useful:
 
 ```
-@article{mavrogiannis2021bgap,
-  title={B-GAP: Behavior-Guided Action Prediction and Navigation for Autonomous Driving},
+@article{mavrogiannis2020bgap,
+  title={B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation},
   author={Mavrogiannis, Angelos and Chandra, Rohan and Manocha, Dinesh},
   journal={arXiv preprint arXiv:2011.03748},
-  year={2021}
+  year={2020}
 }
 ```
 
@@ -21,24 +21,25 @@ Please cite our work if you found it useful:
 </p>
 
 ## Overview
-We present an algorithm for behaviorally-guided action prediction and local navigation for autonomous driving in dense traffic scenarios. Our approach classifies the driver behavior of other vehicles or road-agents (aggressive or conservative) and considers that information for decision-making and safe driving. We present a behavior-driven simulator that can generate trajectories corresponding to different levels of aggressive behaviors, and we use our simulator to train a reinforcement learning policy using a multilayer perceptron neural network. We use our reinforcement learning-based navigation scheme to compute safe trajectories for the ego-vehicle accounting for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. We have integrated our algorithm with the OpenAI gym-based "Highway-Env" simulator and demonstrate the benefits of our navigation algorithm in terms of reducing collisions by 3.25−26.90% and handling scenarios with 2.5× higher traffic density.
+We present a novel learning algorithm for action prediction and local navigation for autonomous driving. Our approach classifies the driver behavior of other vehicles or road-agents (aggressive or conservative) and takes that into account for decision making and safe driving. We present a behavior-driven simulator that can generate trajectories corresponding to different levels of aggressive behaviors and use our simulator to train a policy using graph convolutional networks. We use a reinforcement learning-based navigation scheme that uses a proximity graph of traffic agents and computes a safe trajectory for the ego-vehicle that accounts for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. We have integrated our algorithm with OpenAI gym-based "Highway-Env" simulator and demonstrate the benefits in terms of improved navigation in different scenarios.
 
 <p align="center">
-<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/bgap_offline.PNG" height="180" width="2000">
+<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/offline.png" height="180" width="2000">
 </p>
 
-**Offline Training** : We highlight our behavior-guided navigation policy for autonomous driving. We use a behavior-rich simulator that can generate aggressive or conservative driving styles. In *Step 1*, we use the CMetric behavior classification algorithm to compute a set of parameters that characterize aggressive behaviors such as over-speeding, overtaking, and sudden lane changing. In *Step 2*,  we use these parameters to train a behavior-based action class navigation policy for action prediction and local navigation.
+**Offline Training** : We use a behavior-rich simulator that can generate aggressive or conservative driving styles. In Step 1,we use the CMetric behavior classification algorithm to compute a set of parameters that characterize aggressive behaviors such as overspeeding, overtaking, and sudden lane-changing. In Step 2, we use these parameters to train a behavior-based action class navigation policy for action prediction and local navigation.
 
 <p align="center">
-<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/bgap_runtime.PNG" height="480" width="800">
+<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/online.png" height="480" width="800">
 </p>
 
-**Online Training** : We use our behavior-guided trained policy and the final simulation parameters computed using offline training. During an episode at runtime, we use the trained policy to predict the next action of the ego-vehicle given the current state of the traffic environment, which is represented in the form of a feature matrix. The predicted action (in this case, "turn left") is converted into the final local trajectory using the internal controls of the simulator, modified by the parameters that take into account the behavior of traffic agents.
+**Online Training** : We use our behavior-guided trained policy and the final simulation parameters computed using offline training. During an episode at runtime, we use the trained policy to predict the next action of the ego vehicle given the current state of the traffic environment, which is represented in the form of a traffic-graph. The predicted action (in this case, \`\`turn left\'\') is converted into the final local trajectory using the internal controls of the simulator, modified by the parameters that take into account the behavior of traffic agents.
 
 ## Dependencies
 ```python
 Python: ">=3.6"
 PyTorch: ">=1.4.0"
+PyTorch Geometric
 TensorBoard
 ```
 
@@ -58,8 +59,8 @@ where `${CUDA}` should be replaced by either `cpu`, `cu92`, `cu101`, `cu102`, or
 
 ## Usage
 ### Simulator Environment
-- To use the behavior-rich simulator including conservative and aggressive vehicles use [master](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/tree/master) branch.
-- To use the *[default](https://github.com/eleurent/highway-env)* OpenAI gym-based simulator switch to the [default_sim](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/tree/default_sim) branch. (Credits to Edouard Leurent)
+- To use the behavior-rich simulator including conservative and aggressive vehicles use [master](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/tree/master) branch.
+- To use the *[default](https://github.com/eleurent/highway-env)* OpenAI gym-based simulator switch to the [default_sim](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/tree/default_sim) branch. (Credits to Edouard Leurent)
 
 ### Build
 First, build the code using the following commands:
@@ -96,39 +97,94 @@ We evaluate two models -- Multi-layer Perceptron (MLP) and GCN in dense traffic 
 - **Average Speed (Avg. Spd.)** of the ego-vehicle, since it captures the distance per second covered in a varying time interval.
 - **Number of lane changes (#LC)** performed by the ego-vehicle on average during the given duration. In general, fewer lane changes imply that the ego vehicle can cover the same distance with fewer maneuvers. We notice that our approach based on GCN results in approximately 50% reduction in the number of lane changes as compared to MLP.
 
-### Dense Traffic (n = 40 vehicles)
-
+### Dense Traffic (n = 20 vehicles)
 <table>
-  <tr>
-    <td>Collision frequency</td>
-     <td>Average speed</td>
-     <td>Average number of lane changes</td>
-  </tr>
-  <tr>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/crash40.png"></td>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/vel40.png"></td>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/lc40.png"></td>
-  </tr>
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th colspan=2>Default</th>
+            <th colspan=2>Conservative</th>
+            <th colspan=2>Aggressive</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><i>(n=20)</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+        </tr>
+        <tr>
+            <td style="text-align: center">MLP</td>
+            <td style="text-align: center">22.65</td>
+            <td style="text-align: center">4.10</td>
+            <td style="text-align: center">19.70</td>
+            <td style="text-align: center">2.90</td>
+            <td style="text-align: center">28.80</td>
+           <td style="text-align: center">2.60</td>
+        </tr>
+        <tr>
+            <td style="text-align: center">GCN</td>
+            <td style="text-align: center">22.26</td>
+            <td style="text-align: center">0.82</td>
+            <td style="text-align: center">18.90</td>
+            <td style="text-align: center">2.33</td>
+            <td style="text-align: center">29.00</td>
+            <td style="text-align: center">1.40</td>
+        </tr>
+    </tbody>
 </table>
 
-### Sparse Traffic (n = 5 vehicles)
-
+### Sparse Traffic (n = 10 vehicles)
 <table>
-  <tr>
-    <td>Collision frequency</td>
-     <td>Average speed</td>
-     <td>Average number of lane changes</td>
-  </tr>
-  <tr>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/crash5.png"></td>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/vel5.png"></td>
-    <td valign="top"><img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/barcharts/lc5.png"></td>
-  </tr>
+    <thead>
+        <tr>
+            <th>Model</th>
+            <th colspan=2>Default</th>
+            <th colspan=2>Conservative</th>
+            <th colspan=2>Aggressive</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><i>(n=20)</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+            <td><i>Avg. Spd. (m/s)</i></td>
+            <td><i>#LC</i></td>
+        </tr>
+        <tr>
+            <td style="text-align: center">MLP</td>
+            <td style="text-align: center">23.75</td>
+            <td style="text-align: center">6.25</td>
+            <td style="text-align: center">21.40</td>
+            <td style="text-align: center">3.50</td>
+            <td style="text-align: center">29.16</td>
+           <td style="text-align: center">2.06</td>
+        </tr>
+        <tr>
+            <td style="text-align: center">GCN</td>
+            <td style="text-align: center">23.60</td>
+            <td style="text-align: center">0.35</td>
+            <td style="text-align: center">20.60</td>
+            <td style="text-align: center">1.60</td>
+            <td style="text-align: center">28.90</td>
+            <td style="text-align: center">1.30</td>
+        </tr>
+    </tbody>
 </table>
 
-### Evaluation
-The behavior-rich policy is compared with the default policy in traffic scenarios of varying density and driver behavior. The behavior-rich policy leads to improved navigation and reduced number of collisions by adjusting the speed of the ego-vehicle to the behaviors of its neighbors (higher average speed for higher percentages of aggressive neighbors) and decreasing its lane changes to respect unpredictable drivers. When *n=5* in the aggressive scenario, the number of lane changes is higher, as the ego-vehicle is more confident to perform lane-changing maneuvers due to the sparsity of the traffic.
+### Advantages of Our Behavior-Rich Simulator
+As the default simulator does not contain any behavior-rich trajectories, the ego-vehicle is not able to adjust its average speed and maintains a speed that is approximately the average of the average speeds obtained when operating in conservative and aggressive environments. Furthermore, the ego-vehicle does not follow a realistic lane-changing pattern in the default environment as it performs excessive number of lane changes using the MLP, but mostly follows the traffic with very few lane changes using the GCN.
 
-For extended results and comparison with prior work, please refer to our [paper](https://arxiv.org/abs/2011.03748).
+### Behavior-Guided Actions
+- **Conservative Traffic**: The ego-vehicle learns to confidently overtake slow-moving traffic. This reduces its average speed, but increases the number of lane changes.
+- **Aggressive Traffic**: The ego-vehicle learns to act carefully around aggressive drivers, choosing to stay in the same lane. This result in fewer lane changes and safer navigation, as compared to the one observed in current AVs.
+
 
 For visualized results and comparison, please watch the **[video](https://youtu.be/AKa0esw88sQ)** submitted as supplementary material.

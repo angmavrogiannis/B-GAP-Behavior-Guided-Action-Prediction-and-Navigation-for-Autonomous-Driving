@@ -16,6 +16,10 @@ Please cite our work if you found it useful:
 }
 ```
 
+<p align="center">
+  <img src="/images/aggro.gif" alt="animated" />
+</p>
+
 ## Overview
 We present a novel learning algorithm for action prediction and local navigation for autonomous driving. Our approach classifies the driver behavior of other vehicles or road-agents (aggressive or conservative) and takes that into account for decision making and safe driving. We present a behavior-driven simulator that can generate trajectories corresponding to different levels of aggressive behaviors and use our simulator to train a policy using graph convolutional networks. We use a reinforcement learning-based navigation scheme that uses a proximity graph of traffic agents and computes a safe trajectory for the ego-vehicle that accounts for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. We have integrated our algorithm with OpenAI gym-based "Highway-Env" simulator and demonstrate the benefits in terms of improved navigation in different scenarios.
 
@@ -56,7 +60,7 @@ where `${CUDA}` should be replaced by either `cpu`, `cu92`, `cu101`, `cu102`, or
 ## Usage
 ### Simulator Environment
 - To use the behavior-rich simulator including conservative and aggressive vehicles use [master](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/tree/master) branch.
-- To use the default OpenAI gym-based simulator switch to the [default_sim](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/tree/default_sim) branch.
+- To use the *[default](https://github.com/eleurent/highway-env)* OpenAI gym-based simulator switch to the [default_sim](/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/tree/default_sim) branch. (Credits to Edouard Leurent)
 
 ### Build
 First, build the code using the following commands:
@@ -181,3 +185,6 @@ As the default simulator does not contain any behavior-rich trajectories, the eg
 ### Behavior-Guided Actions
 - **Conservative Traffic**: The ego-vehicle learns to confidently overtake slow-moving traffic. This reduces its average speed, but increases the number of lane changes.
 - **Aggressive Traffic**: The ego-vehicle learns to act carefully around aggressive drivers, choosing to stay in the same lane. This result in fewer lane changes and safer navigation, as compared to the one observed in current AVs.
+
+
+For visualized results and comparison, please watch the **[video](https://youtu.be/AKa0esw88sQ)** submitted as supplementary material.

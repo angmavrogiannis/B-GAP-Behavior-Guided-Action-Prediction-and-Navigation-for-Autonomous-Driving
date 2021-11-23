@@ -1,0 +1,33 @@
+{
+    "base_config": "configs/IntersectionEnv/agents/DQNAgent/baseline.json",
+    "model": {
+        "type": "EgoAttentionNetwork",
+        "embedding_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [64, 64],
+            "reshape": false,
+            "in": 7
+        },
+        "others_embedding_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [64, 64],
+            "reshape": false,
+            "in": 7
+        },
+        "self_attention_layer": {
+            "type": "SelfAttention",
+            "feature_size": 64,
+            "heads": 2
+        },
+        "attention_layer": {
+            "type": "EgoAttention",
+            "feature_size": 64,
+            "heads": 2
+        },
+        "output_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [64, 64],
+            "reshape": false
+        }
+    }
+}

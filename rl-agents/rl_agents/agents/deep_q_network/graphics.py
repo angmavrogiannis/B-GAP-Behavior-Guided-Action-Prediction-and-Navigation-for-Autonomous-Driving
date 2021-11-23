@@ -26,8 +26,11 @@ class DQNGraphics(object):
         :param display_text: whether to display the action values as text
         """
         import pygame
+        if agent.previous_state is None:
+            return
         action_values = agent.get_state_action_values(agent.previous_state)
         action_distribution = agent.action_distribution(agent.previous_state)
+
         cell_size = (surface.get_width() // len(action_values), surface.get_height())
         pygame.draw.rect(surface, cls.BLACK, (0, 0, surface.get_width(), surface.get_height()), 0)
 
@@ -65,7 +68,7 @@ class DQNGraphics(object):
                     width = attention[head] * 5
                     desat = remap(attention[head], (0, 0.5), (0.7, 1), clip=True)
                     colors = sns.color_palette("dark", desat=desat)
-                    color = np.array(colors[2-2*head]) * 255
+                    color = np.array(colors[(2*head) % (len(colors) - 1)]) * 255
                     color = (*color, remap(attention[head], (0, 0.5), (100, 200), clip=True))
                     if vehicle is agent.env.vehicle:
                         pygame.draw.circle(attention_surface, color,
@@ -88,16 +91,19 @@ class DQNGraphics(object):
         ego, others, mask = agent.value_net.split_input(state_t)
         mask = mask.squeeze()
         v_attention = {}
+        obs_type = agent.env.observation_type
+        if hasattr(obs_type, "agents_observation_types"):  # Handle multi-agent observation
+            obs_type = obs_type.agents_observation_types[0]
         for v_index in range(state.shape[0]):
             if mask[v_index]:
                 continue
             v_position = {}
             for feature in ["x", "y"]:
-                v_feature = state[v_index, agent.env.observation.features.index(feature)]
-                v_feature = remap(v_feature, [-1, 1], agent.env.observation.features_range[feature])
+                v_feature = state[v_index, obs_type.features.index(feature)]
+                v_feature = remap(v_feature, [-1, 1], obs_type.features_range[feature])
                 v_position[feature] = v_feature
             v_position = np.array([v_position["x"], v_position["y"]])
-            if not agent.env.observation.absolute and v_index > 0:
+            if not obs_type.absolute and v_index > 0:
                 v_position += agent.env.unwrapped.vehicle.position
             vehicle = min(agent.env.road.vehicles, key=lambda v: np.linalg.norm(v.position - v_position))
             v_attention[vehicle] = attention[:, v_index]

@@ -1,0 +1,10 @@
+{
+    "__class__": "<class 'rl_agents.agents.tree_search.deterministic.DeterministicPlannerAgent'>",
+    "env_preprocessors": [
+        {
+            "method":"randomize_behaviour"
+        }
+    ],
+    "budget": 100,
+    "gamma": 0.9
+}

@@ -1,0 +1,48 @@
+{
+    "__class__": "<class 'rl_agents.agents.fitted_q.pytorch.FTQAgent'>",
+    "model": {
+        "type": "EgoAttentionNetwork",
+        "embedding_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [32, 32],
+            "reshape": false,
+            "in": 7
+        },
+        "others_embedding_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [32, 32],
+            "reshape": false,
+            "in": 7
+        },
+        "attention_layer": {
+            "type": "EgoAttention",
+            "feature_size": 32,
+            "heads": 1
+        },
+        "output_layer": {
+            "type": "MultiLayerPerceptron",
+            "layers": [32],
+            "reshape": false
+        }
+    },
+    "optimizer":
+    {
+        "type": "ADAM",
+        "lr": 0.01,
+        "weight_decay": 0.0,
+        "k": 1
+    },
+    "exploration":
+    {
+        "method": "EpsilonGreedy",
+        "tau": 6000
+    },
+    "device": "cuda:0",
+    "processes": 20,
+    "batch_size": 7000,
+    "memory_capacity": 50000,
+    "gamma": 0.9,
+    "value_iteration_epochs": 15,
+    "regression_epochs": 5000,
+    "loss_function": "l2"
+}

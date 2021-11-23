@@ -1,7 +1,0 @@
-[rl_agents.trainer.evaluation:INFO] [BATCH=1/1]--------------------------------------- 
-[rl_agents.trainer.evaluation:INFO] [BATCH=1/1][run_batched_episodes] #samples=0 
-[rl_agents.trainer.evaluation:INFO] [BATCH=1/1]--------------------------------------- 
-[rl_agents.agents.fitted_q.pytorch:INFO] Saved a replay memory of length 0 
-[rl_agents.agents.fitted_q.pytorch:INFO] Saved a replay memory of length 0 
-[rl_agents.trainer.evaluation:INFO] Saved FTQAgent model to /home/abhinavmodi/git_cloned/rl-agents/scripts/out/HighwayEnv/FTQAgent/baseline_20200503-224048_10930/checkpoint-0.tar 
-[rl_agents.trainer.evaluation:INFO] Collecting 14 samples with 12 workers... 

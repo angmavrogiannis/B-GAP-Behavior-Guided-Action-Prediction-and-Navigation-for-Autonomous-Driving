@@ -110,9 +110,9 @@ def preprocess_env(env, preprocessor_configs):
                 else:
                     env = preprocessor()
             except AttributeError:
-                logger.warn("The environment does not have a {} method".format(preprocessor_config["method"]))
+                logger.warning("The environment does not have a {} method".format(preprocessor_config["method"]))
         else:
-            logger.error("The method is not specified in ", preprocessor)
+            logger.error("The method is not specified in ", preprocessor_config)
     return env
 
 
@@ -124,7 +124,7 @@ def safe_deepcopy_env(obj):
     result = cls.__new__(cls)
     memo = {id(obj): result}
     for k, v in obj.__dict__.items():
-        if k not in ['viewer', 'automatic_rendering_callback', 'grid_render']:
+        if k not in ['viewer', '_monitor', 'grid_render']:
             if isinstance(v, gym.Env):
                 setattr(result, k, safe_deepcopy_env(v))
             else:

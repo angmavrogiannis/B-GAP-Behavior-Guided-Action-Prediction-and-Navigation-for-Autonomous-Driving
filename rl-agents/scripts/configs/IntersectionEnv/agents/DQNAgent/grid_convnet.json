@@ -1,0 +1,13 @@
+{
+    "base_config": "configs/IntersectionEnv/agents/DQNAgent/baseline.json",
+    "model": {
+        "type": "ConvolutionalNetwork",
+        "activation": "RELU",
+        "head_mlp": {
+            "type": "MultiLayerPerceptron",
+            "layers": [20],
+            "activation": "RELU",
+            "reshape": "True"
+        }
+    }
+}

@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import time
 from multiprocessing.pool import Pool
 from pathlib import Path
 import numpy as np
@@ -74,8 +75,10 @@ class Evaluation(object):
         self.monitor = MonitorV2(env,
                                  self.run_directory,
                                  video_callable=(None if self.display_env else False))
+        self.episode = 0
         self.writer = SummaryWriter(str(self.run_directory))
         self.agent.set_writer(self.writer)
+        self.agent.evaluation = self
         self.write_logging()
         self.write_metadata()
         self.filtered_agent_stats = 0
@@ -89,8 +92,10 @@ class Evaluation(object):
             try:
                 # Render the agent within the environment viewer, if supported
                 self.env.render()
+                self.env.unwrapped.viewer.directory = self.run_directory
                 self.env.unwrapped.viewer.set_agent_display(
                     lambda agent_surface, sim_surface: AgentGraphics.display(self.agent, agent_surface, sim_surface))
+                self.env.unwrapped.viewer.directory = self.run_directory
             except AttributeError:
                 logger.info("The environment viewer doesn't support agent rendering.")
         self.reward_viewer = None
@@ -107,9 +112,12 @@ class Evaluation(object):
         self.close()
 
     def test(self):
+        """
+        Test the agent.
+
+        If applicable, the agent model should be loaded before using the recover option.
+        """
         self.training = False
-        if not self.recover:
-            logger.warning("No pre-trained model has been loaded.")
         if self.display_env:
             self.monitor.video_callable = MonitorV2.always_call_video
         try:
@@ -120,37 +128,29 @@ class Evaluation(object):
         self.close()
 
     def run_episodes(self):
-        num_crashes = 0
-        speed = []
-        num_lc = []
-        for episode in range(self.num_episodes):
+        for self.episode in range(self.num_episodes):
             # Run episode
             terminal = False
-            self.seed(episode)
+            self.seed(self.episode)
             self.reset()
             rewards = []
+            start_time = time.time()
             while not terminal:
                 # Step until a terminal step is reached
                 reward, terminal = self.step()
                 rewards.append(reward)
-                if self.env.vehicle.crashed:
-                    num_crashes += 1
+
                 # Catch interruptions
                 try:
                     if self.env.unwrapped.done:
-                        return
+                        break
                 except AttributeError:
                     pass
-            num_lc.append(self.env.lc)
-            speed += self.env.speed_vals
+
             # End of episode
-            self.after_all_episodes(episode, rewards)
-            self.after_some_episodes(episode, rewards)
-        print('Number of crashes: ', num_crashes)
-        print('Average speed: ', np.mean(speed))
-        print('Std of speed: ', np.std(speed))
-        print('Average # lane changes: ', np.mean(num_lc))
-        print('Std of lane changes: ', np.std(num_lc))
+            duration = time.time() - start_time
+            self.after_all_episodes(self.episode, rewards, duration)
+            self.after_some_episodes(self.episode, rewards)
 
     def step(self):
         """
@@ -172,11 +172,10 @@ class Evaluation(object):
         self.observation, reward, terminal, info = self.monitor.step(action)
 
         # Record the experience.
-        if self.training:
-            try:
-                self.agent.record(previous_observation, action, reward, self.observation, terminal, info)
-            except NotImplementedError:
-                pass
+        try:
+            self.agent.record(previous_observation, action, reward, self.observation, terminal, info)
+        except NotImplementedError:
+            pass
 
         return reward, terminal
 
@@ -310,12 +309,13 @@ class Evaluation(object):
         except NotImplementedError:
             pass
 
-    def after_all_episodes(self, episode, rewards):
+    def after_all_episodes(self, episode, rewards, duration):
         rewards = np.array(rewards)
         gamma = self.agent.config.get("gamma", 1)
         self.writer.add_scalar('episode/length', len(rewards), episode)
         self.writer.add_scalar('episode/total_reward', sum(rewards), episode)
         self.writer.add_scalar('episode/return', sum(r*gamma**t for t, r in enumerate(rewards)), episode)
+        self.writer.add_scalar('episode/fps', len(rewards) / duration, episode)
         self.writer.add_histogram('episode/rewards', rewards, episode)
         logger.info("Episode {} score: {:.1f}".format(episode, sum(rewards)))
 

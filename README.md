@@ -1,18 +1,24 @@
 # B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation
-This repository contains code and technical details for the paper we submitted to ICRA 2021:
+This repository contains code and technical details for the paper that was published at RA-L and presented at IROS 2022:
 
-**[B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation](https://arxiv.org/abs/2011.03748)**
+**[B-GAP: Behavior-Rich Simulation and Navigation for Autonomous Driving](https://arxiv.org/abs/2011.03748)**
 
 Authors: Angelos Mavrogiannis, Rohan Chandra, and Dinesh Manocha
+
+Note that the current code also includes Graph Convolutional Networks to account for agent-agent interactions, corresponding to a prior version of the paper.
 
 Please cite our work if you found it useful:
 
 ```
-@article{mavrogiannis2020bgap,
-  title={B-GAP: Behavior-Guided Action Prediction for Autonomous Navigation},
+@article{9716825,
   author={Mavrogiannis, Angelos and Chandra, Rohan and Manocha, Dinesh},
-  journal={arXiv preprint arXiv:2011.03748},
-  year={2020}
+  journal={IEEE Robotics and Automation Letters}, 
+  title={B-GAP: Behavior-Rich Simulation and Navigation for Autonomous Driving}, 
+  year={2022},
+  volume={7},
+  number={2},
+  pages={4718-4725},
+  doi={10.1109/LRA.2022.3152594}
 }
 ```
 
@@ -21,16 +27,16 @@ Please cite our work if you found it useful:
 </p>
 
 ## Overview
-We present a novel learning algorithm for action prediction and local navigation for autonomous driving. Our approach classifies the driver behavior of other vehicles or road-agents (aggressive or conservative) and takes that into account for decision making and safe driving. We present a behavior-driven simulator that can generate trajectories corresponding to different levels of aggressive behaviors and use our simulator to train a policy using graph convolutional networks. We use a reinforcement learning-based navigation scheme that uses a proximity graph of traffic agents and computes a safe trajectory for the ego-vehicle that accounts for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. We have integrated our algorithm with OpenAI gym-based "Highway-Env" simulator and demonstrate the benefits in terms of improved navigation in different scenarios.
+We address the problem of ego-vehicle navigation in dense simulated traffic environments populated by road agents with varying driver behaviors. Navigation in such environments is challenging due to unpredictability in agents’ actions caused by their heterogeneous behaviors. We present a new simulation technique consisting of enriching existing traffic simulators with behavior-rich trajectories corresponding to varying levels of aggressiveness. We generate these trajectories with the help of a driver behavior modeling algorithm. We then use the enriched simulator to train a deep reinforcement learning (DRL) policy that consists of a set of high-level vehicle control commands and use this policy at test time to perform local navigation in dense traffic. Our policy implicitly models the interactions between traffic agents and computes safe trajectories for the ego-vehicle accounting for aggressive driver maneuvers such as overtaking, over-speeding, weaving, and sudden lane changes. Our enhanced behavior-rich simulator can be used for generating datasets that consist of trajectories corresponding to diverse driver behaviors and traffic densities, and our behavior-based navigation scheme can be combined with state-of-the-art navigation algorithms.
 
 <p align="center">
-<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/offline.png" height="180" width="2000">
+<img src="[https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/offline.png](https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/b-gap-overview.png)" height="180" width="2000">
 </p>
 
 **Offline Training** : We use a behavior-rich simulator that can generate aggressive or conservative driving styles. In Step 1,we use the CMetric behavior classification algorithm to compute a set of parameters that characterize aggressive behaviors such as overspeeding, overtaking, and sudden lane-changing. In Step 2, we use these parameters to train a behavior-based action class navigation policy for action prediction and local navigation.
 
 <p align="center">
-<img src="https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/online.png" height="480" width="800">
+<img src="[https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation/blob/master/images/online.png](https://github.com/angmavrogiannis/B-GAP-Behavior-Guided-Action-Prediction-and-Navigation-for-Autonomous-Driving/blob/master/images/bgap_runtime.PNG)" height="480" width="800">
 </p>
 
 **Online Training** : We use our behavior-guided trained policy and the final simulation parameters computed using offline training. During an episode at runtime, we use the trained policy to predict the next action of the ego vehicle given the current state of the traffic environment, which is represented in the form of a traffic-graph. The predicted action (in this case, \`\`turn left\'\') is converted into the final local trajectory using the internal controls of the simulator, modified by the parameters that take into account the behavior of traffic agents.

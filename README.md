@@ -1,7 +1,7 @@
 # B-GAP-Behavior-Guided-Action-Prediction-for-Autonomous-Navigation
 This repository contains code and technical details for the paper that was published at RA-L and presented at IROS 2022:
 
-**[B-GAP: Behavior-Rich Simulation and Navigation for Autonomous Driving]** [[arXiv](https://arxiv.org/abs/2011.03748)] [[IEEE Xplore](https://ieeexplore.ieee.org/document/9716825)]
+**B-GAP: Behavior-Rich Simulation and Navigation for Autonomous Driving** [[arXiv](https://arxiv.org/abs/2011.03748)] [[IEEE Xplore](https://ieeexplore.ieee.org/document/9716825)]
 
 Authors: Angelos Mavrogiannis, Rohan Chandra, and Dinesh Manocha
 

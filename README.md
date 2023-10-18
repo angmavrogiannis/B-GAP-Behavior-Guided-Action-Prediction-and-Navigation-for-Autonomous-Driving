@@ -36,7 +36,7 @@ We address the problem of ego-vehicle navigation in dense simulated traffic envi
 **Offline Training** : We use a behavior-rich simulator that can generate aggressive or conservative driving styles. In Step 1,we use the CMetric behavior classification algorithm to compute a set of parameters that characterize aggressive behaviors such as overspeeding, overtaking, and sudden lane-changing. In Step 2, we use these parameters to train a behavior-based action class navigation policy for action prediction and local navigation.
 
 <p align="center">
-<img src="/images/bgap_runtime.PNG">
+<img src="/images/bgap_runtime.PNG" max-width: 100%; height: auto;>
 </p>
 
 **Online Training** : We use our behavior-guided trained policy and the final simulation parameters computed using offline training. During an episode at runtime, we use the trained policy to predict the next action of the ego vehicle given the current state of the traffic environment, which is represented in the form of a traffic-graph. The predicted action (in this case, \`\`turn left\'\') is converted into the final local trajectory using the internal controls of the simulator, modified by the parameters that take into account the behavior of traffic agents.
